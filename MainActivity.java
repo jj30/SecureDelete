@@ -3,13 +3,17 @@ package com.example.jj.hw;
 import android.content.ClipData;
 import android.content.Context;
 import android.content.Intent;
+import android.database.Cursor;
+import android.net.Uri;
 import android.os.Bundle;
 import android.os.Environment;
+import android.provider.MediaStore;
 import android.support.design.widget.FloatingActionButton;
 import android.support.design.widget.Snackbar;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.Toolbar;
 import android.util.Base64;
+import android.util.DisplayMetrics;
 import android.util.Log;
 import android.view.View;
 import android.view.Menu;
@@ -35,11 +39,7 @@ public class MainActivity extends AppCompatActivity {
         Toolbar toolbar = (Toolbar) findViewById(R.id.toolbar);
         setSupportActionBar(toolbar);
 
-
-
         Intent intent = getIntent();
-        // String action = intent.getAction();
-        // String type = intent.getType();
         ClipData clipData = intent.getClipData();
         String path = "";
         String sEncrypted = "";
@@ -49,39 +49,26 @@ public class MainActivity extends AppCompatActivity {
 
             if (itm.getUri() != null) {
                 path = itm.getUri().toString();
+                path = getRealPathFromURI(this.getApplicationContext(), itm.getUri());
                 BaseCrypto encFile = new BaseCrypto();
                 byte[] fileBytes;
 
                 try {
-                    String strRealPath = Environment.getExternalStorageDirectory().getPath();
-                    fileBytes = IOUtil.readFile(strRealPath + "/DCIM/Camera/IMG_20150927_212926.jpg");
+                    fileBytes = IOUtil.readFile(path);
                     sEncrypted = encFile.encryptContent(Base64.encodeToString(fileBytes, Base64.DEFAULT), "password", "abcde0");
-                    // fileBytes = IOUtil.readFile(strRealPath + "/DCIM/Camera/encrypted.jpg");
-
-                    String sDecrypted = encFile.decryptContent(sEncrypted, "password", "abcde0");
-                    byte[] decOut = Base64.decode(sDecrypted, Base64.DEFAULT);
-
-                    // String encryptedBytes = x.encryptBytes(keyValue, "password", "abcde0");
-                    // byte[] decryptedBytes = x.decryptBytes(encryptedBytes, "password", "abcde0");
-                    // byte[] encryptedBytes = x.encryptBytes(fileBytes, "pass", "01aeb9ab");
-                    // file:///storage/sdcard0/DCIM/Camera/IMG_20150927_212926.jpg
+                    byte[] encOut = Base64.decode(sEncrypted, Base64.DEFAULT);
 
                     // now that the file is encrypted, write it to disk
-                    BufferedOutputStream bos = new BufferedOutputStream(new FileOutputStream(strRealPath + "/DCIM/Camera/decrypted.jpg"));
-                    bos.write(decOut);
+                    BufferedOutputStream bos = new BufferedOutputStream(new FileOutputStream(path));
+                    bos.write(encOut);
                     bos.flush();
                     bos.close();
+
+                    // Test code: am I encrypting correctly?
+                    // String sDecrypted = encFile.decryptContent(sEncrypted, "password", "abcde0");
                 } catch (IOException ex) {
-                    Log.i("YO", ex.toString());
-
+                    Log.i("Secure Delete", ex.toString());
                 }
-
-                Context context = getApplicationContext();
-                CharSequence text = sEncrypted;
-                int duration = Toast.LENGTH_LONG;
-
-                Toast toast = Toast.makeText(context, text, duration);
-                toast.show();
             }
         }
 
@@ -94,6 +81,25 @@ public class MainActivity extends AppCompatActivity {
             }
         });
     }
+
+    // http://stackoverflow.com/questions/19985286/convert-content-uri-to-actual-path-in-android-4-4
+    private String getRealPathFromURI(Context context, Uri contentUri) {
+        Cursor cursor = null;
+        try {
+            String[] proj = { MediaStore.Images.Media.DATA };
+            cursor = context.getContentResolver().query(contentUri,  proj, null, null, null);
+            int column_index = cursor.getColumnIndexOrThrow(MediaStore.Images.Media.DATA);
+            cursor.moveToFirst();
+            String path = cursor.getString(column_index);
+
+            return path;
+        } finally {
+            if (cursor != null) {
+                cursor.close();
+            }
+        }
+    }
+
 
     @Override
     public boolean onCreateOptionsMenu(Menu menu) {
