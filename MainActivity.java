@@ -29,6 +29,7 @@ import java.io.BufferedReader;
 import java.io.FileNotFoundException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.util.Random;
 
 public class MainActivity extends AppCompatActivity {
 
@@ -55,7 +56,11 @@ public class MainActivity extends AppCompatActivity {
 
                 try {
                     fileBytes = IOUtil.readFile(path);
-                    sEncrypted = encFile.encryptContent(Base64.encodeToString(fileBytes, Base64.DEFAULT), "password", "abcde0");
+
+                    // Get random password and salt. Default == 0.
+                    String strRandomPW = getRandomPWSalt(16, Base64.DEFAULT);
+                    String strRandomSalt = getRandomPWSalt(16, 1);
+                    sEncrypted = encFile.encryptContent(Base64.encodeToString(fileBytes, Base64.DEFAULT), strRandomPW, strRandomSalt);
                     byte[] encOut = Base64.decode(sEncrypted, Base64.DEFAULT);
 
                     // now that the file is encrypted, write it to disk
@@ -82,6 +87,22 @@ public class MainActivity extends AppCompatActivity {
         });
     }
 
+    private String getRandomPWSalt(int numchars, int enc) {
+        Random r = new Random();
+        StringBuffer sb = new StringBuffer();
+        while(sb.length() < numchars) {
+            if (enc == Base64.DEFAULT) {
+                byte[] rBytes = new byte[64];
+                r.nextBytes(rBytes);
+                sb.append(Base64.encodeToString(rBytes, Base64.DEFAULT));
+            } else {
+                sb.append(Integer.toHexString(r.nextInt()));
+            }
+        }
+
+        return sb.toString().substring(0, numchars);
+    }
+
     // http://stackoverflow.com/questions/19985286/convert-content-uri-to-actual-path-in-android-4-4
     private String getRealPathFromURI(Context context, Uri contentUri) {
         Cursor cursor = null;
@@ -99,7 +120,6 @@ public class MainActivity extends AppCompatActivity {
             }
         }
     }
-
 
     @Override
     public boolean onCreateOptionsMenu(Menu menu) {
