@@ -102,7 +102,7 @@ public class MainActivity extends AppCompatActivity {
 
         return sb.toString().substring(0, numchars);
     }
-    
+
     // http://stackoverflow.com/questions/19985286/convert-content-uri-to-actual-path-in-android-4-4
     private String getRealPathFromURI(Context context, Uri contentUri) {
         Cursor cursor = null;
